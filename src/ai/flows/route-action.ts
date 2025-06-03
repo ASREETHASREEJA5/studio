@@ -1,3 +1,4 @@
+
 // src/ai/flows/route-action.ts
 'use server';
 
@@ -37,10 +38,15 @@ export async function routeAction(input: RouteActionInput): Promise<RouteActionO
   return routeActionFlow(input);
 }
 
+// Define a schema for the prompt's specific input, including the stringified agentOutput
+const RouteActionPromptInputSchema = RouteActionInputSchema.extend({
+    agentOutputStringified: z.string().describe('The stringified JSON of the specialized agent output.')
+});
+
 const prompt = ai.definePrompt({
   name: 'routeActionPrompt',
   input: {
-    schema: RouteActionInputSchema,
+    schema: RouteActionPromptInputSchema, // Use the new schema for prompt input
   },
   output: {
     schema: RouteActionOutputSchema,
@@ -49,7 +55,7 @@ const prompt = ai.definePrompt({
 
 Document Format: {{{format}}}
 Business Intent: {{{intent}}}
-Specialized Agent Output: {{{JSONstringify agentOutput}}}
+Specialized Agent Output: {{{agentOutputStringified}}}
 
 Consider the following when deciding the action:
 - If the agent output (especially for emails) indicates low urgency and a polite or neutral tone for a routine inquiry (like a request for information, product specs, or a simple question), the action should be 'log_and_close'.
@@ -70,37 +76,40 @@ Return a JSON object with 'actionTaken' (one of the possible actions) and 'detai
 - For 'escalate_issue', 'details' should reflect the escalation, e.g., "Issue escalated due to [reason]."
 - For 'flag_compliance_risk', 'details' should describe the risk flagged, e.g., "Compliance risk flagged: [description of risk]."
 `,
-  // Register a Handlebars helper to stringify the agentOutput object for the prompt
-  templateHelpers: {
-    JSONstringify: (context) => JSON.stringify(context),
-  },
+  // templateHelpers is no longer needed as we pre-stringify
 });
 
 const routeActionFlow = ai.defineFlow(
   {
     name: 'routeActionFlow',
-    inputSchema: RouteActionInputSchema,
+    inputSchema: RouteActionInputSchema, // The flow's external input schema remains the same
     outputSchema: RouteActionOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async (flowInput: RouteActionInput) => { // Use flowInput to distinguish from prompt's input
+    // Prepare the input for the prompt by stringifying agentOutput
+    const promptInput = {
+        ...flowInput,
+        agentOutputStringified: JSON.stringify(flowInput.agentOutput),
+    };
+    
+    const {output} = await prompt(promptInput); // Pass the prepared input to the prompt
 
     let endpoint = '';
     let actionDetails = output?.details ?? 'No specific details provided by AI.';
-    const agentOutputForSimCall = input.agentOutput; // Use the original agent output for the simulated call
+    const agentOutputForSimCall = flowInput.agentOutput; // Use the original agent output for the simulated call
 
     if (output?.actionTaken === 'create_ticket') {
       endpoint = '/crm/create_ticket';
-      actionDetails = output.details || `Simulated ticket creation for intent: ${input.intent}`;
+      actionDetails = output.details || `Simulated ticket creation for intent: ${flowInput.intent}`;
     } else if (output?.actionTaken === 'escalate_issue') {
       endpoint = '/crm/escalate';
-      actionDetails = output.details || `Simulated escalation for intent: ${input.intent}`;
+      actionDetails = output.details || `Simulated escalation for intent: ${flowInput.intent}`;
     } else if (output?.actionTaken === 'flag_compliance_risk') {
       endpoint = '/risk_alert/flag';
-      actionDetails = output.details || `Simulated compliance risk flagging for intent: ${input.intent}`;
+      actionDetails = output.details || `Simulated compliance risk flagging for intent: ${flowInput.intent}`;
     } else if (output?.actionTaken === 'log_and_close') {
       endpoint = '/crm/log_inquiry';
-      actionDetails = output.details || `Simulated logging of routine inquiry for intent: ${input.intent}`;
+      actionDetails = output.details || `Simulated logging of routine inquiry for intent: ${flowInput.intent}`;
     } else {
       return {
         actionTaken: 'no_action_determined',

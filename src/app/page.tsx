@@ -226,7 +226,7 @@ const App = () => {
         </div>
       </main>
       <footer className="text-center py-4 text-sm text-muted-foreground border-t border-border">
-        Context Chained AI Actions &copy; {new Date().getFullYear()}
+        Context Chained Al Actions &copy; 2025
       </footer>
     </div>
   );

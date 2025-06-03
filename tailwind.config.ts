@@ -11,8 +11,8 @@ export default {
     extend: {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
-        code: ['monospace'],
+        headline: ['Space Grotesk', 'sans-serif'],
+        code: ['Source Code Pro', 'monospace'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -55,6 +55,7 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        // Sidebar colors are kept for shadcn compatibility, but not used in this app
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',
@@ -88,10 +89,15 @@ export default {
             height: '0',
           },
         },
+        'pulse-subtle': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '.7' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },
